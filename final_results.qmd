@@ -1,0 +1,199 @@
+---
+title: "Results: Summary"
+format:
+  su-theme-revealjs:
+    embed-resources: true
+    chalkboard: false
+footer: "Elicitation workshop 2025-07-02"
+
+---
+
+```{r, echo = FALSE}
+source("functions.r")
+
+# Read results
+core_scenario <- readr::read_csv("round_2.csv") |>
+dplyr::filter(which_phase == 2) |> # Final estimates from  PHASE 2
+dplyr::mutate(scenario = "core")
+
+tech_scenario <- readr::read_csv("tech.csv") |>
+dplyr::filter(which_phase == 1) |> # There is _only_ phase 1 for tech scenario
+dplyr::mutate(scenario = "tech")
+
+lookup <- readr::read_csv("lookup.csv")
+
+results <- dplyr::bind_rows(core_scenario, tech_scenario) |>
+dplyr::filter(
+          !(.data[["low_0_5"]] == 0 &
+            .data[["low_5_10"]] == 0 &
+            .data[["high_0_5"]] == 0 &
+            .data[["high_5_10"]] == 0)
+        )  |> # Remove any values left at default 
+ dplyr::left_join(lookup, by = c("email" = "hash_email")) |>
+ dplyr::select(tidyselect::matches("low|high"), team, scenario, email) |>
+ dplyr::select(-tidyselect::matches("comments"))
+
+results_tidy <-
+  results |>
+  tidyr::pivot_longer(
+    cols = starts_with(c("low_", "high_")),
+    names_to = c("level", "period"),
+    names_pattern = "(low|high)_(.*)",
+    values_to = "value",
+    names_transform = list(Level = stringr::str_to_title)
+  ) |>
+  tidyr::pivot_wider(
+    names_from = level,
+    values_from = value
+  ) 
+```
+
+
+```{r, eval = FALSE}
+# Check tidy results are unique()
+results_tidy |>
+dplyr::group_by(scenario, team, period) |>
+dplyr::summarise(is_unique = dplyr::n_distinct(email) == dplyr::n()) |>
+dplyr::pull(is_unique) |>
+all()
+```
+
+```{r}
+# Aggregate expert opinions
+
+results_dist <-
+results_tidy |>
+    dplyr::mutate(
+      mu = (low + high) / 2,
+      sigma = (high - mu) / qnorm(p = 0.90, mean = 0, sd = 1)
+    ) |>
+    dplyr::mutate(sigma = dplyr::if_else(sigma == 0, 0.0001, sigma)) |>
+    dplyr::mutate(
+      dist = purrr::map2(
+        mu,
+        sigma,
+        \(m, s) {
+          distr::Norm(mean = m, sd = s)
+        }
+      )
+    )
+
+# Total summaries for each scenario
+
+results_total <-
+results_dist |>
+ dplyr::group_by(scenario, period) |>
+    dplyr::summarise(dist = list(dist), n = dplyr::n()) |>
+    dplyr::mutate(
+      mixture = purrr::map(
+        dist,
+        \(x) distr::UnivarMixingDistribution(Dlist = x)
+      )
+    ) |>
+    dplyr::mutate(
+      p10 = purrr::map_dbl(mixture, \(m) m@q(p = 0.1)),
+      p50 = purrr::map_dbl(mixture, \(m) m@q(p = 0.5)),
+      p90 = purrr::map_dbl(mixture, \(m) m@q(p = 0.9)),
+    )
+
+# Per team summaries for each scenario
+
+results_per_team <-
+results_dist |>
+ dplyr::group_by(scenario, team, period) |>
+    dplyr::summarise(dist = list(dist), n = dplyr::n()) |>
+    dplyr::mutate(
+      mixture = purrr::map(
+        dist,
+        \(x) distr::UnivarMixingDistribution(Dlist = x)
+      )
+    ) |>
+    dplyr::mutate(
+      p10 = purrr::map_dbl(mixture, \(m) m@q(p = 0.1)),
+      p50 = purrr::map_dbl(mixture, \(m) m@q(p = 0.5)),
+      p90 = purrr::map_dbl(mixture, \(m) m@q(p = 0.9)),
+    )
+
+results_all <-
+dplyr::bind_rows(results_total, results_per_team) |>
+dplyr::select(scenario, team, period, n, p10, p90) |>
+dplyr::mutate(team = tidyr::replace_na(team, "all")) |>
+dplyr::ungroup()
+```
+
+
+```{r}
+# Tables
+
+
+# 10 yr average
+
+results_all |>
+dplyr::filter(period == "avg") |>
+make_summary_table() |>
+knitr::kable(caption = "CAGR 0-10 years (derived)") |>
+   kableExtra::kable_styling(font_size = 18)
+
+# 0 -5
+
+results_all |>
+dplyr::filter(period == "0_5") |>
+make_summary_table() |>
+knitr::kable(caption = "CAGR 0-5 years") |>
+  kableExtra::kable_styling(font_size = 18)
+
+
+# 5 - 10
+
+results_all |>
+dplyr::filter(period == "5_10") |>
+make_summary_table() |>
+ knitr::kable(caption = "CAGR 5-10 years") |>
+    kableExtra::kable_styling(font_size = 18)
+```
+
+---
+
+```{r}
+results_all |>
+  dplyr::mutate(team = factor(team, levels = c("all", "A", "B", "C"))) |>
+ dplyr::filter(period == "avg") |>
+    ggplot2::ggplot(
+      ggplot2::aes(
+        y = .data[["team"]],
+        fill = .data[["team"]],
+        colour = .data[["team"]]
+      )
+    ) +
+    ggplot2::geom_point(
+      ggplot2::aes(
+        x = .data[["p10"]],
+      ),
+      size = 3,
+      show.legend = FALSE
+    ) +
+    ggplot2::geom_point(
+      ggplot2::aes(
+        x = .data[["p90"]]
+      ),
+      size = 3,
+      show.legend = FALSE
+    ) +
+    ggplot2::geom_segment(
+      ggplot2::aes(
+        x = .data[["p10"]],
+        xend = .data[["p90"]],
+        yend = .data[["team"]]
+      ),
+      lwd = 1.5,
+    ) +
+    ggplot2::theme_minimal(base_size = 16) +
+    ggplot2::theme(axis.text.y = ggplot2::element_blank()) +
+    ggplot2::ylab("") +
+    ggplot2::xlab("") +
+    StrategyUnitTheme::scale_color_su() +
+    ggplot2::facet_wrap(~scenario) +
+    ggplot2::geom_vline(xintercept =  0, linetype = "dotted")
+```
+
+

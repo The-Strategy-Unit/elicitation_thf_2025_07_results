@@ -1,0 +1,48 @@
+---
+title: "Results: Round 2"
+format:
+  su-theme-revealjs:
+    embed-resources: true
+    chalkboard: false
+footer: "Elicitation workshop 2025-07-02"
+
+---
+
+```{r, echo = FALSE}
+source("functions.r")
+
+# Read results
+no_teams <- readr::read_csv("round_2.csv") |>
+dplyr::filter(which_phase == 2) |> # NOTE this is PHASE 2
+dplyr::filter(
+          !(.data[["low_0_5"]] == 0 &
+            .data[["low_5_10"]] == 0 &
+            .data[["high_0_5"]] == 0 &
+            .data[["high_5_10"]] == 0)
+        )  # Remove any values left at default
+
+# Create lookup
+lookup <- readr::read_csv("lookup.csv")
+
+# Combine
+round_2 <- dplyr::left_join(no_teams, lookup, by = c("email" = "hash_email")) |>
+dplyr::select(tidyselect::matches("low|high"), team)
+```
+
+```{r}
+round_2 |>
+make_table()
+```
+---
+
+
+```{r}
+#| fig-width: 12
+#| fig-height: 8
+#| out-width: "100%"
+#| out-height: "100%"
+round_2 |>
+make_dumbell()
+```
+
+
