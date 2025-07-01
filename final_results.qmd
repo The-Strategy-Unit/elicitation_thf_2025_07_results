@@ -156,7 +156,7 @@ make_summary_table() |>
 
 ```{r}
 results_all |>
-  dplyr::mutate(team = factor(team, levels = c("all", "A", "B", "C"))) |>
+  dplyr::mutate(team = factor(team, levels = c("all", "Front line", "Policy", "Research"))) |>
  dplyr::filter(period == "avg") |>
     ggplot2::ggplot(
       ggplot2::aes(
@@ -191,7 +191,8 @@ results_all |>
     ggplot2::theme(axis.text.y = ggplot2::element_blank()) +
     ggplot2::ylab("") +
     ggplot2::xlab("") +
-    StrategyUnitTheme::scale_color_su() +
+    ggplot2::scale_color_manual(values = c("#f9bf07", "#5881c1", "#ec6555", "#686f73")) +
+    ggplot2::scale_y_discrete(limits = rev) +
     ggplot2::facet_wrap(~scenario) +
     ggplot2::geom_vline(xintercept =  0, linetype = "dotted")
 ```

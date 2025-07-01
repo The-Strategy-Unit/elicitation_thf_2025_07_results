@@ -45,7 +45,7 @@ make_dumbell <- function(results) {
     ggplot2::theme(axis.text.y = ggplot2::element_blank()) +
     ggplot2::ylab("") +
     ggplot2::xlab("") +
-    StrategyUnitTheme::scale_color_su()
+    ggplot2::scale_color_manual(values = c("#f9bf07", "#5881c1", "#ec6555"))
 }
 
 make_table <- function(results) {
