@@ -20,7 +20,7 @@ I've created dummy results files that you can use to check you can generate the 
 
 On the day, these will be downloaded from the shiny app and need to be renamed.
 
-You can download the non-tech scenario from [connect.strategyunitwm.nhs.uk/elicitation_productivity/?results](https://connect.strategyunitwm.nhs.uk/elicitation_productivity/?results/)and the tech scenario from [connect.strategyunitwm.nhs.uk/elicitation_productivity_tech?results](https://connect.strategyunitwm.nhs.uk/elicitation_productivity_tech/?results).
+You can download the non-tech scenario from [connect.strategyunitwm.nhs.uk/elicitation_productivity/?results](https://connect.strategyunitwm.nhs.uk/elicitation_productivity/?results/)and the tech scenario from [connect.strategyunitwm.nhs.uk/elicitation_productivity_tech/?results](https://connect.strategyunitwm.nhs.uk/elicitation_productivity_tech/?results).
 
 You will need
 
